@@ -43,6 +43,10 @@
     "type": "git",
     "url": "https://github.com/ibreeze2017/regedit-helper.git"
   },
+  "dependencies": {
+    "@types/node": "^11.15.20",
+    "iconv-lite": "^0.6.2"
+  },
   "devDependencies": {
     "@iovx/iv-tool": "^1.1.3"
   }
