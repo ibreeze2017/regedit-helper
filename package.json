@@ -1,8 +1,9 @@
 {
   "name": "regedit-helper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A simple tool to help handle the registry",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "test": "jest --coverage",
     "lint": "eslint --ext .tsx,.ts --fix ./src",
