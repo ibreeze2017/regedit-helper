@@ -1,0 +1,49 @@
+{
+  "name": "regedit-helper",
+  "version": "1.0.1",
+  "description": "A simple tool to help handle the registry",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "jest --coverage",
+    "lint": "eslint --ext .tsx,.ts --fix ./src",
+    "build:page": "iv build:page",
+    "compile": "iv compile --lib",
+    "clean": "iv clean"
+  },
+  "author": "ixw2017",
+  "license": "ISC",
+  "keywords": [
+    "registry",
+    "utils"
+  ],
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "cross-env commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "files": [
+    "lib",
+    "package.json",
+    "README.md"
+  ],
+  "bugs": {
+    "url": "https://github.com/ibreeze2017/regedit-helper/issues"
+  },
+  "publishConfig": {
+    "url": " https://registry.npmjs.org/"
+  },
+  "homepage": "https://github.com/ibreeze2017/regedit-helper#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ibreeze2017/regedit-helper.git"
+  },
+  "devDependencies": {
+    "@iovx/iv-tool": "^1.1.3"
+  }
+}

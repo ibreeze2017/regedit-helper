@@ -1,0 +1,18 @@
+{
+  "tsFiles": [
+    "src/**/*.ts",
+    "!src/**/__tests__/**/*.ts"
+  ],
+  "assetFiles": [
+    "src/**/*.@(json|png|jpg|jpeg|gif|svg)"
+  ],
+  "dist": "",
+  "libDir": "src",
+  "cwd": ".",
+  "compress": {
+    "dist": false
+  },
+  "clean": [
+    "lib"
+  ]
+}
