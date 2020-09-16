@@ -1,6 +1,6 @@
 {
   "name": "regedit-helper",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A simple tool to help handle the registry",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -45,7 +45,7 @@
     "url": "https://github.com/ibreeze2017/regedit-helper.git"
   },
   "dependencies": {
-    "@types/node": "^11.15.20",
+    "@types/node": "^14.10.0",
     "iconv-lite": "^0.6.2"
   },
   "devDependencies": {

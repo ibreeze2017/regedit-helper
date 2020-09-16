@@ -1,7 +1,7 @@
 import { exec } from 'child_process';
 import * as iconv from 'iconv-lite';
 
-interface MapType<T=any> {
+interface MapType<T = any> {
   [index: string]: T;
 }
 
@@ -19,7 +19,6 @@ interface RegistryRecord {
   key: string;
   type: string;
   value: string;
-
 }
 
 interface QueryResultObject {
@@ -62,7 +61,6 @@ const encoding = 'cp936';
 const binaryEncoding: any = 'binary';
 
 export default class RegeditHelper {
-
   public static REG_SZ = 'REG_SZ' as RegEditType;
   public static REG_EXPAND = 'REG_EXPAND' as RegEditType;
   public static REG_DWORD = 'REG_DWORD' as RegEditType;
@@ -110,39 +108,90 @@ export default class RegeditHelper {
   }
 
   public static isValidType(type: string) {
-    return ([
-      RegeditHelper.REG_SZ,
-      RegeditHelper.REG_EXPAND,
-      RegeditHelper.REG_DWORD,
-      RegeditHelper.REG_MULTI_SZ,
-      RegeditHelper.REG_BINARY,
-      RegeditHelper.REG_DEFAULT,
-    ] as string[]).indexOf(type.toUpperCase()) > -1;
+    return (
+      ([
+        RegeditHelper.REG_SZ,
+        RegeditHelper.REG_EXPAND,
+        RegeditHelper.REG_DWORD,
+        RegeditHelper.REG_MULTI_SZ,
+        RegeditHelper.REG_BINARY,
+        RegeditHelper.REG_DEFAULT,
+      ] as string[]).indexOf(type.toUpperCase()) > -1
+    );
   }
 
   public static toValues(o: QueryResultObject) {
-    return !o ? {} : o.data.reduce<MapType<string>>((acc, c) => {
-      if (c) {
-        acc[c.key.trim()] = c.value;
-      }
-      return acc;
-    }, {});
+    return !o
+      ? {}
+      : o.data.reduce<MapType<string>>((acc, c) => {
+          if (c) {
+            acc[c.key.trim()] = c.value;
+          }
+          return acc;
+        }, {});
   }
 
   private static read(keyPath: string, type = '') {
-    return RegeditHelper.exec([`reg query "${keyPath}"`, type ? `/t ${type}` : ''].join(' ')).catch(err => {
+    return RegeditHelper.exec([`reg query "${keyPath}"`, type ? `/t ${type}` : ''].join(' ')).catch((err) => {
       err.message = `Failed to get value of ${RegeditHelper.getKeyPath(keyPath)}`;
       throw err;
     });
   }
 
   public static getFullKey(key: string) {
-    return Object.keys(RegeditHelper.mapping).reduce((acc, k) => acc.replace(new RegExp(`^${k}`), RegeditHelper.mapping[k]), key);
+    return Object.keys(RegeditHelper.mapping).reduce(
+      (acc, k) => acc.replace(new RegExp(`^${k}`), RegeditHelper.mapping[k]),
+      key
+    );
   }
 
   public static async query(key: string, type = '', rec = false, maxDepth = -1) {
     const rs: QueryResultObject[] = [];
     const fullKey = RegeditHelper.getFullKey(key);
+
+    /**
+     * parse query row
+     * @param {string[]} data
+     * @returns {RegistryRecord[]}
+     */
+    function f(data: string[]) {
+      return data
+        .map((i) => i.trim().match(/(.+)(\s+REG\w+\s+)(.+)/)!)
+        .filter(Boolean)
+        .map<RegistryRecord>(([rec, key, type, value]) => ({
+          rec,
+          key,
+          type,
+          value,
+        }));
+    }
+
+    function t(content: string) {
+      let ck = '';
+      const p = content
+        .split('\r\n')
+        .filter(Boolean)
+        .reduce<MapType<string[]>>((acc, c) => {
+          if (c.indexOf(fullKey) === 0) {
+            acc[(ck = c)] = [];
+            return acc;
+          }
+          if (c === ck) {
+            return acc;
+          }
+          acc[ck].push(c);
+          return acc;
+        }, {});
+      return Object.entries(p)
+        .map<[string, RegistryRecord[]]>(([k, v]) => [k, f(v)])
+        .reduce<MapType<RegistryRecord[]>>(
+          (acc, [k, v]) => ({
+            ...acc,
+            [k]: v,
+          }),
+          {}
+        );
+    }
 
     async function loop(loopKey: string, rec = false, depth = 0) {
       const content = await RegeditHelper.read(loopKey, type);
@@ -172,59 +221,39 @@ export default class RegeditHelper {
       return rs;
     }
 
-    function t(content: string) {
-      let ck = '';
-      const p = content.split('\r\n').filter(Boolean).reduce<MapType<string[]>>((acc, c) => {
-        if (c.indexOf(fullKey) === 0) {
-          acc[ck = c] = [];
-          return acc;
-        }
-        if (c === ck) {
-          return acc;
-        }
-        acc[ck].push(c);
-        return acc;
-      }, {});
-      return Object.entries(p).map<[string, RegistryRecord[]]>(([k, v]) => [k, f(v)]).reduce<MapType<RegistryRecord[]>>((acc, [k, v]) => ({
-        ...acc,
-        [k]: v,
-      }), {});
-    }
-
-    /**
-     * parse query row
-     * @param {string[]} data
-     * @returns {RegistryRecord[]}
-     */
-    function f(data: string[]) {
-      return data
-        .map(i => i.trim().match(/(.+)(\s+REG\w+\s+)(.+)/)!).filter(Boolean).map<RegistryRecord>(([rec, key, type, value]) => ({
-          rec,
-          key,
-          type,
-          value,
-        }));
-    }
-
     return loop(fullKey, rec);
   }
 
   public static remove(keyPath: string, value = '') {
-    return RegeditHelper.exec([`reg delete "${keyPath}"`, value !== '' ? `/v "${value}"` : '', '/f'].join(' ')).catch(err => {
-      err.message = `Failed to delete value # ${RegeditHelper.getKeyPath(keyPath, value)}：${value}`;
-      throw err;
-    });
+    return RegeditHelper.exec([`reg delete "${keyPath}"`, value !== '' ? `/v "${value}"` : '', '/f'].join(' ')).catch(
+      (err) => {
+        err.message = `Failed to delete value # ${RegeditHelper.getKeyPath(keyPath, value)}：${value}`;
+        throw err;
+      }
+    );
   }
 
   public static add(keyPath: string, key: string, value: string, type = RegeditHelper.REG_SZ) {
-    return RegeditHelper.exec(`reg add "${keyPath}" /v "${key}" /t "${type}" /d "${value}" /f`).catch(err => {
+    return RegeditHelper.exec(`reg add "${keyPath}" /v "${key}" /t "${type}" /d "${value}" /f`).catch((err) => {
       err.message = `Failed to add or update value ${[keyPath, key].join('\\')}：${value}`;
       throw err;
     });
   }
 
+  public static createKey(keyPath: string) {
+    return RegeditHelper.exec(`reg add "${keyPath}" /f`).catch((err) => {
+      err.message = `Failed to create Key ${keyPath}`;
+      throw err;
+    });
+  }
+
   public static insert(keyPath: string, valueObject: ValueObject) {
-    return Promise.all(Object.entries(valueObject).map(([k, v]) => RegeditHelper.add(keyPath, k, v.value, v.type))).then(r => r.every(Boolean));
+    if (!Object.keys(valueObject).length) {
+      return RegeditHelper.createKey(keyPath);
+    }
+    return Promise.all(
+      Object.entries(valueObject).map(([k, v]) => RegeditHelper.add(keyPath, k, v.value, v.type))
+    ).then((r) => r.every(Boolean));
   }
 
   public static update(keyPath: string, valueObject: ValueObject) {
@@ -244,15 +273,18 @@ export default class RegeditHelper {
   }
 
   public insertValues(values: MapType<string | number>, keyPath = '', type: RegEditType = RegeditHelper.REG_SZ) {
-    return this.insert(Object.entries(values).reduce<ValueObject>((acc, [k, v]) => {
-      if (RegeditHelper.isValidType(type)) {
-        acc[k] = {
-          type,
-          value: v,
-        };
-      }
-      return acc;
-    }, {}), keyPath);
+    return this.insert(
+      Object.entries(values).reduce<ValueObject>((acc, [k, v]) => {
+        if (RegeditHelper.isValidType(type)) {
+          acc[k] = {
+            type,
+            value: v,
+          };
+        }
+        return acc;
+      }, {}),
+      keyPath
+    );
   }
 
   public update(values: MapType<string | number>, keyPath = '', type: RegEditType = RegeditHelper.REG_SZ) {
@@ -265,21 +297,29 @@ export default class RegeditHelper {
   }
 
   public async values() {
-    return !this.result ? [] : (await this.result).filter(i => i.type === RegeditHelper.NodeType.VALUE).reduce<MapType<MapType<string>>>((acc, c) => {
-      acc[c.key] = RegeditHelper.toValues(c);
-      return acc;
-    }, {});
+    return !this.result
+      ? []
+      : (await this.result)
+          .filter((i) => i.type === RegeditHelper.NodeType.VALUE)
+          .reduce<MapType<MapType<string>>>((acc, c) => {
+            acc[c.key] = RegeditHelper.toValues(c);
+            return acc;
+          }, {});
   }
 
   public async simple() {
-    return !this.result ? [] : (await this.result).reduce<MapType<MapType<string>>>((acc, c) => {
-      acc[c.key] = RegeditHelper.toValues(c);
-      return acc;
-    }, {});
+    return !this.result
+      ? []
+      : (await this.result).reduce<MapType<MapType<string>>>((acc, c) => {
+          acc[c.key] = RegeditHelper.toValues(c);
+          return acc;
+        }, {});
   }
 
   public async one() {
-    return this.result ? RegeditHelper.toValues(((await this.result).filter(i => i.key === RegeditHelper.ROOT_KEY)[0])) : {};
+    return this.result
+      ? RegeditHelper.toValues((await this.result).filter((i) => i.key === RegeditHelper.ROOT_KEY)[0])
+      : {};
   }
 
   public origin() {
@@ -290,13 +330,20 @@ export default class RegeditHelper {
     return this.namespace;
   }
 
-  public remove(keys: string | string[] = []) {
+  public remove(keys: string | string[] = [], value: string | string[] = []) {
     const removeKeys = typeof keys === 'string' ? [keys] : keys;
-    return Promise.all((removeKeys.length ? removeKeys : ['']).map(k => this.getKeyPath(k)).map(k => RegeditHelper.remove(k))).then(r => r.every(Boolean));
+    if (value && value.length) {
+      const valueKeys = typeof value === 'string' ? [value] : value;
+      return Promise.all(
+        valueKeys.map((k) => RegeditHelper.remove(this.getKeyPath(removeKeys.length ? removeKeys[0] : ''), k))
+      ).then((r) => r.every(Boolean));
+    }
+    return Promise.all(
+      (removeKeys.length ? removeKeys : ['']).map((k) => this.getKeyPath(k)).map((k) => RegeditHelper.remove(k))
+    ).then((r) => r.every(Boolean));
   }
 
   public release() {
     this.result = null;
   }
 }
-
